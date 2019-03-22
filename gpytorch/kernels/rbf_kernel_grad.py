@@ -56,6 +56,7 @@ class RBFKernelGrad(RBFKernel):
 
     def __init__(
         self,
+        ard_num_dims=None,
         batch_size=1,
         active_dims=None,
         lengthscale_prior=None,
@@ -64,12 +65,12 @@ class RBFKernelGrad(RBFKernel):
         eps=1e-6,
         **kwargs
     ):
-        # TODO: Add support for ARD
         super(RBFKernelGrad, self).__init__(
+            ard_num_dims=ard_num_dims,
             batch_size=batch_size,
             active_dims=active_dims,
             lengthscale_prior=lengthscale_prior,
-            param_transform=softplus,
+            param_transform=param_transform,
             inv_param_transform=inv_param_transform,
             eps=eps,
             **kwargs
@@ -85,12 +86,11 @@ class RBFKernelGrad(RBFKernel):
             _, n2, _ = x2.size()
 
         K = torch.zeros(b, n1 * (d + 1), n2 * (d + 1), device=x1.device, dtype=x1.dtype)  # batch x n1(d+1) x n2(d+1)
-        ell = self.lengthscale.squeeze(-1)
 
         if not diag:
             # Scale the inputs by the lengthscale (for stability)
-            x1_ = x1 / ell
-            x2_ = x2 / ell
+            x1_ = x1.div(self.lengthscale)
+            x2_ = x2.div(self.lengthscale)
 
             # Form all possible rank-1 products for the gradient and Hessian blocks
             outer = x1_.view([b, n1, 1, d]) - x2_.view([b, 1, n2, d])
