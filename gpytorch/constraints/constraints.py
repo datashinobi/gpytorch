@@ -8,13 +8,7 @@ from torch.nn import Module
 
 
 class Interval(Module):
-    def __init__(
-        self,
-        lower_bound,
-        upper_bound,
-        transform=sigmoid,
-        inv_transform=inv_sigmoid,
-    ):
+    def __init__(self, lower_bound, upper_bound, transform=sigmoid, inv_transform=inv_sigmoid):
         """
         Defines an interval constraint for GP model parameters, specified by a lower bound and upper bound. For usage
         details, see the documentation for :meth:`~gpytorch.module.Module.register_constraint`.
@@ -28,20 +22,16 @@ class Interval(Module):
         if not torch.is_tensor(upper_bound):
             upper_bound = torch.tensor(upper_bound)
 
-        if torch.any(upper_bound < math.inf) and torch.any(lower_bound > -math.inf) and transform != sigmoid:
-            raise RuntimeError("Cannot enforce a double sided bound with a non-sigmoid transform!")
-
         super().__init__()
 
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
 
         self._transform = transform
+        self._inv_transform = inv_transform
 
         if transform is not None and inv_transform is None:
             self._inv_transform = _get_inv_param_transform(transform)
-        else:
-            self._inv_transform = inv_transform
 
     def _apply(self, fn):
         self.lower_bound = fn(self.lower_bound)
@@ -88,9 +78,9 @@ class Interval(Module):
         transformed_tensor = self._transform(tensor)
 
         upper_bound = self.upper_bound.clone()
-        upper_bound[upper_bound == math.inf] = 1.
+        upper_bound[upper_bound == math.inf] = 1.0
         lower_bound = self.lower_bound.clone()
-        lower_bound[lower_bound == -math.inf] = 0.
+        lower_bound[lower_bound == -math.inf] = 0.0
 
         transformed_tensor = transformed_tensor * upper_bound
         transformed_tensor = transformed_tensor + lower_bound
@@ -118,7 +108,7 @@ class Interval(Module):
 
     def __repr__(self):
         if self.lower_bound.numel() == 1 and self.upper_bound.numel() == 1:
-            return self._get_name() + f'({self.lower_bound}, {self.upper_bound})'
+            return self._get_name() + f"({self.lower_bound}, {self.upper_bound})"
         else:
             return super().__repr__()
 
@@ -128,46 +118,30 @@ class Interval(Module):
 
 
 class GreaterThan(Interval):
-    def __init__(
-        self,
-        lower_bound,
-        transform=softplus,
-        inv_transform=inv_softplus,
-        active=True,
-    ):
+    def __init__(self, lower_bound, transform=softplus, inv_transform=inv_softplus, active=True):
         super().__init__(
-            lower_bound=lower_bound,
-            upper_bound=math.inf,
-            transform=transform,
-            inv_transform=inv_transform
+            lower_bound=lower_bound, upper_bound=math.inf, transform=transform, inv_transform=inv_transform
         )
 
     def __repr__(self):
         if self.lower_bound.numel() == 1:
-            return self._get_name() + f'({self.lower_bound})'
+            return self._get_name() + f"({self.lower_bound})"
         else:
             return super().__repr__()
 
 
 class Positive(GreaterThan):
     def __init__(self, transform=softplus, inv_transform=inv_softplus):
-        super().__init__(
-            lower_bound=0.,
-            transform=transform,
-            inv_transform=inv_transform
-        )
+        super().__init__(lower_bound=0.0, transform=transform, inv_transform=inv_transform)
 
     def __repr__(self):
-        return self._get_name() + '()'
+        return self._get_name() + "()"
 
 
 class LessThan(Interval):
     def __init__(self, upper_bound, transform=softplus, inv_transform=inv_softplus):
         super().__init__(
-            lower_bound=-math.inf,
-            upper_bound=upper_bound,
-            transform=transform,
-            inv_transform=inv_transform
+            lower_bound=-math.inf, upper_bound=upper_bound, transform=transform, inv_transform=inv_transform
         )
 
     def transform(self, tensor):
@@ -187,4 +161,4 @@ class LessThan(Interval):
         return tensor
 
     def __repr__(self):
-        return self._get_name() + f'({self.upper_bound})'
+        return self._get_name() + f"({self.upper_bound})"
