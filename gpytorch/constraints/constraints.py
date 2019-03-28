@@ -40,6 +40,8 @@ class Interval(Module):
 
         if transform is not None and inv_transform is None:
             self._inv_transform = _get_inv_param_transform(transform)
+        else:
+            self._inv_transform = inv_transform
 
     def _apply(self, fn):
         self.lower_bound = fn(self.lower_bound)
@@ -172,7 +174,7 @@ class LessThan(Interval):
         if not self.enforced:
             return tensor
 
-        transformed_tensor = -self.transform(-tensor)
+        transformed_tensor = -self._transform(-tensor)
         transformed_tensor = transformed_tensor + self.upper_bound
         return transformed_tensor
 
