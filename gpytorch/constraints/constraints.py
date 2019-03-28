@@ -3,7 +3,7 @@
 import math
 import torch
 from torch.nn.functional import softplus, sigmoid
-from ..utils.transforms import _get_inv_param_transform
+from ..utils.transforms import _get_inv_param_transform, inv_sigmoid, inv_softplus
 from torch.nn import Module
 
 
@@ -13,7 +13,7 @@ class Interval(Module):
         lower_bound,
         upper_bound,
         transform=sigmoid,
-        inv_transform=None,
+        inv_transform=inv_sigmoid,
     ):
         """
         Defines an interval constraint for GP model parameters, specified by a lower bound and upper bound. For usage
@@ -37,7 +37,8 @@ class Interval(Module):
         self.upper_bound = upper_bound
 
         self._transform = transform
-        if self.enforced and inv_transform is None:
+
+        if transform is not None and inv_transform is None:
             self._inv_transform = _get_inv_param_transform(transform)
 
     def _apply(self, fn):
@@ -126,7 +127,7 @@ class GreaterThan(Interval):
         self,
         lower_bound,
         transform=softplus,
-        inv_transform=None,
+        inv_transform=inv_softplus,
         active=True,
     ):
         super().__init__(
@@ -144,7 +145,7 @@ class GreaterThan(Interval):
 
 
 class Positive(GreaterThan):
-    def __init__(self, transform=softplus, inv_transform=None):
+    def __init__(self, transform=softplus, inv_transform=inv_softplus):
         super().__init__(
             lower_bound=0.,
             transform=transform,
@@ -156,7 +157,7 @@ class Positive(GreaterThan):
 
 
 class LessThan(Interval):
-    def __init__(self, upper_bound, transform=softplus, inv_transform=None):
+    def __init__(self, upper_bound, transform=softplus, inv_transform=inv_softplus):
         super().__init__(
             lower_bound=-math.inf,
             upper_bound=upper_bound,
