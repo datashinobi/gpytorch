@@ -22,16 +22,16 @@ class Interval(Module):
         Args:
             - lower_bound (float or torch.Tensor):
         """
-        if upper_bound < math.inf and transform != sigmoid:
-            raise RuntimeError("Cannot enforce an upper bound with a non-sigmoid transform!")
-
-        super().__init__()
-
         if not torch.is_tensor(lower_bound):
             lower_bound = torch.tensor(lower_bound)
 
         if not torch.is_tensor(upper_bound):
             upper_bound = torch.tensor(upper_bound)
+
+        if torch.any(upper_bound < math.inf) and torch.any(lower_bound > -math.inf) and transform != sigmoid:
+            raise RuntimeError("Cannot enforce a double sided bound with a non-sigmoid transform!")
+
+        super().__init__()
 
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
@@ -49,6 +49,9 @@ class Interval(Module):
     @property
     def enforced(self):
         return self._transform is not None
+
+    def check(self, tensor):
+        return torch.all(tensor <= self.upper_bound) and torch.all(tensor >= self.lower_bound)
 
     def intersect(self, other):
         """
