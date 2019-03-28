@@ -110,6 +110,12 @@ class Interval(Module):
 
         return tensor
 
+    def __repr__(self):
+        if self.lower_bound.numel() == 1 and self.upper_bound.numel() == 1:
+            return self._get_name() + f'({self.lower_bound}, {self.upper_bound})'
+        else:
+            return super().__repr__()
+
 
 class GreaterThan(Interval):
     def __init__(
@@ -126,6 +132,12 @@ class GreaterThan(Interval):
             inv_transform=inv_transform
         )
 
+    def __repr__(self):
+        if self.lower_bound.numel() == 1:
+            return self._get_name() + f'({self.lower_bound})'
+        else:
+            return super().__repr__()
+
 
 class Positive(GreaterThan):
     def __init__(self, transform=softplus, inv_transform=None):
@@ -134,6 +146,9 @@ class Positive(GreaterThan):
             transform=transform,
             inv_transform=inv_transform
         )
+
+    def __repr__(self):
+        return self._get_name() + '()'
 
 
 class LessThan(Interval):
@@ -160,3 +175,6 @@ class LessThan(Interval):
         tensor = transformed_tensor - self.upper_bound
         tensor = -self._inv_transform(-tensor)
         return tensor
+
+    def __repr__(self):
+        return self._get_name() + f'({self.upper_bound})'
