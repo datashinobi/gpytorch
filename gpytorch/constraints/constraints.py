@@ -116,6 +116,10 @@ class Interval(Module):
         else:
             return super().__repr__()
 
+    def __iter__(self):
+        yield self.lower_bound
+        yield self.upper_bound
+
 
 class GreaterThan(Interval):
     def __init__(
