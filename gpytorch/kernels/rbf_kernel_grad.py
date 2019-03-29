@@ -137,7 +137,7 @@ class RBFKernelGrad(RBFKernel):
 
             kernel_diag = super(RBFKernelGrad, self).forward(x1, x2, diag=True)
             grad_diag = torch.ones(b, n2, d, device=x1.device, dtype=x1.dtype) / self.lengthscale.pow_(2)
-            grad_diag = grad_diag.transpose(-1, -2).contiguous().view([b, n2*d])
+            grad_diag = grad_diag.transpose(-1, -2).contiguous().view([b, n2 * d])
             k_diag = torch.cat((kernel_diag, grad_diag), dim=-1)
             pi = torch.arange(n2 * (d + 1)).view(d + 1, n2).t().contiguous().view((n2 * (d + 1)))
             return k_diag[..., pi]
