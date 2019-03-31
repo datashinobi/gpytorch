@@ -30,7 +30,7 @@ class ScaleKernel(Kernel):
             The base kernel to be scaled.
         :attr:`batch_shape` (int, optional):
             Set this if you want a separate outputscale for each batch of input data. It should be `b`
-            if :attr:`x1` is a `b x n x d` tensor. Default: `torch.Size([1])`
+            if :attr:`x1` is a `b x n x d` tensor. Default: `torch.Size([])`
         :attr:`outputscale_prior` (Prior, optional): Set this if you want to apply a prior to the outputscale
             parameter.  Default: `None`
         :attr:`param_transform` (function, optional):
@@ -55,7 +55,8 @@ class ScaleKernel(Kernel):
     def __init__(self, base_kernel, outputscale_prior=None, **kwargs):
         super(ScaleKernel, self).__init__(has_lengthscale=False, **kwargs)
         self.base_kernel = base_kernel
-        self.register_parameter(name="raw_outputscale", parameter=torch.nn.Parameter(torch.zeros(*self.batch_shape)))
+        outputscale = torch.zeros(*self.batch_shape) if len(self.batch_shape) else torch.tensor(0.)
+        self.register_parameter(name="raw_outputscale", parameter=torch.nn.Parameter(outputscale))
         if outputscale_prior is not None:
             self.register_prior(
                 "outputscale_prior", outputscale_prior, lambda: self.outputscale, lambda v: self._set_outputscale(v)

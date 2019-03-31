@@ -2,6 +2,7 @@
 
 from abc import abstractmethod
 import torch
+import warnings
 from torch.nn import ModuleList
 from ..lazy import lazify, delazify, LazyEvaluatedKernelTensor, ZeroLazyTensor
 from ..module import Module
@@ -101,7 +102,7 @@ class Kernel(Module):
             dimension. It should be `d` if :attr:`x1` is a `n x d` matrix.  Default: `None`
         :attr:`batch_shape` (torch.Size, optional):
             Set this if you want a separate lengthscale for each batch of input
-            data. It should be `b1 x ... x bk` if :attr:`x1` is a `b1 x ... x bk x n x d` tensor.  Default: `1`
+            data. It should be `b1 x ... x bk` if :attr:`x1` is a `b1 x ... x bk x n x d` tensor.
         :attr:`active_dims` (tuple of ints, optional):
             Set this if you want to compute the covariance of only a few input dimensions. The ints
             corresponds to the indices of the dimensions. Default: `None`.
@@ -127,11 +128,29 @@ class Kernel(Module):
         >>> tensor_covar_matrix = lazy_covar_matrix.evaluate() # Gets the actual tensor for this kernel matrix
     """
 
+    def _batch_shape_state_dict_hook(
+        self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs
+    ):
+        if not len(self.batch_shape):
+            try:
+                current_state_dict = self.state_dict()
+                for name, param in current_state_dict.items():
+                    load_param = state_dict[prefix + name]
+                    if load_param.dim() == param.dim() + 1:
+                        warnings.warn(
+                            f"The supplied state_dict contains a parameter ({prefix + name}) with an extra batch "
+                            f"dimension ({load_param.shape} vs {param.shape}).\nDefault batch shapes are now "
+                            "deprecated in GPyTorch. You may wish to re-save your model.", DeprecationWarning
+                        )
+                        load_param.squeeze_(0)
+            except Exception:
+                pass
+
     def __init__(
         self,
         has_lengthscale=False,
         ard_num_dims=None,
-        batch_shape=torch.Size([1]),
+        batch_shape=torch.Size([]),
         active_dims=None,
         lengthscale_prior=None,
         param_transform=softplus,
@@ -140,6 +159,8 @@ class Kernel(Module):
         **kwargs
     ):
         super(Kernel, self).__init__()
+        self._register_load_state_dict_pre_hook(self._batch_shape_state_dict_hook)
+
         if active_dims is not None and not torch.is_tensor(active_dims):
             active_dims = torch.tensor(active_dims, dtype=torch.long)
         self.register_buffer("active_dims", active_dims)
@@ -344,13 +365,6 @@ class Kernel(Module):
             if not x1_.size(-1) == x2_.size(-1):
                 raise RuntimeError("x1_ and x2_ must have the same number of dimensions!")
 
-        # TODO: remove bach checking once kernels support arbitrary batch dimensions
-        is_batch = x1_.dim() > 2
-        if not is_batch:
-            x1_ = x1_.unsqueeze(0)
-            if x2_ is not None:
-                x2_ = x2_.unsqueeze(0)
-
         if x2_ is None:
             x2_ = x1_
 
@@ -371,13 +385,6 @@ class Kernel(Module):
 
         if diag:
             res = super(Kernel, self).__call__(x1_, x2_, diag=True, batch_dims=batch_dims, **params)
-
-            # TODO: remove bach checking once kernels support arbitrary batch dimensions
-            if not is_batch:
-                res = res.squeeze(0)
-                x1_ = x1_.squeeze(0)
-                if x2_ is not x1_:
-                    x2_ = x2_.squeeze(0)
 
             # Did this Kernel eat the diag option?
             # If it does not return a LazyEvaluatedKernelTensor, we can call diag on the output
@@ -417,13 +424,6 @@ class Kernel(Module):
                 res = LazyEvaluatedKernelTensor(x1_, x2_, kernel=self, batch_dims=batch_dims, **params)
             else:
                 res = super(Kernel, self).__call__(x1_, x2_, batch_dims=batch_dims, **params)
-
-            # TODO: remove bach checking once kernels support arbitrary batch dimensions
-            if not is_batch:
-                res = res.squeeze(0)
-                x1_ = x1_.squeeze(0)
-                if x2_ is not x1_:
-                    x2_ = x2_.squeeze(0)
 
             # Now we'll make sure that the shape we're getting makes sense
             if settings.debug.on():

@@ -18,7 +18,7 @@ class SpectralMixtureKernel(Kernel):
 
         Unlike other kernels,
         * :attr:`ard_num_dums` **must equal** the number of dimensions of the data
-        * :attr:`batch_shape` **must equal** the batch size of the data (torch.Size([1]) if the data is not batched)
+        * :attr:`batch_shape` **must equal** the batch size of the data (torch.Size([]) if the data is not batched)
         * :attr:`batch_shape` **cannot** contain more than one batch dimension.
         * This kernel should not be combined with a :class:`gpytorch.kernels.ScaleKernel`.
 
@@ -30,7 +30,7 @@ class SpectralMixtureKernel(Kernel):
             It should be `d` if :attr:`x1` is a `n x d` matrix. Default: `1`
         :attr:`batch_shape` (torch.Size, optional):
             Set this if the data is
-             batch of input data. It should be `b` if :attr:`x1` is a `b x n x d` tensor. Default: `torch.Size([1])`
+             batch of input data. It should be `b` if :attr:`x1` is a `b x n x d` tensor. Default: `torch.Size([])`
         :attr:`active_dims` (tuple of ints, optional):
             Set this if you want to compute the covariance of only a few input dimensions. The ints
             corresponds to the indices of the dimensions. Default: `None`.
@@ -70,7 +70,7 @@ class SpectralMixtureKernel(Kernel):
         self,
         num_mixtures=None,
         ard_num_dims=1,
-        batch_shape=torch.Size([1]),
+        batch_shape=torch.Size([]),
         mixture_scales_prior=None,
         mixture_means_prior=None,
         mixture_weights_prior=None,

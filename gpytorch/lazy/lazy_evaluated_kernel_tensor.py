@@ -143,21 +143,7 @@ class LazyEvaluatedKernelTensor(LazyTensor):
         x1 = self.x1
         x2 = self.x2
 
-        # TODO: until kernels support multi-batch mode, we have to ensure that the kernel has a batch dimension
-        is_batch = True
-        if x1.dim() == 2:
-            is_batch = False
-            x1 = x1.unsqueeze(0)
-            x2 = x2.unsqueeze(0)
-
         res = super(Kernel, self.kernel).__call__(x1, x2, diag=True, batch_dims=self.batch_dims, **self.params)
-
-        # TODO: until kernels support multi-batch mode, we have to remove any artificial batch dimension
-        # that we've added
-        if not is_batch:
-            x1 = x1.squeeze(0)
-            x2 = x2.squeeze(0)
-            res = res.squeeze(0)
 
         # Did this Kernel eat the diag option?
         # If it does not return a LazyEvaluatedKernelTensor, we can call diag on the output

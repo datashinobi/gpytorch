@@ -42,7 +42,7 @@ class MaternKernel(Kernel):
             input dimension. It should be `d` if :attr:`x1` is a `n x d` matrix. Default: `None`
         :attr:`batch_shape` (torch.Size, optional):
             Set this if you want a separate lengthscale for each
-             batch of input data. It should be `b` if :attr:`x1` is a `b x n x d` tensor. Default: `torch.Size([1])`
+             batch of input data. It should be `b` if :attr:`x1` is a `b x n x d` tensor. Default: `torch.Size([])`
         :attr:`active_dims` (tuple of ints, optional):
             Set this if you want to
             compute the covariance of only a few input dimensions. The ints
