@@ -32,20 +32,29 @@ def _matmul_broadcast_shape(shape_a, shape_b, error_msg=None):
     if len(shape_b) == 1:
         if n != p:
             if error_msg is None:
-                raise RuntimeError("Incompatible dimensions for matmul")
+                raise RuntimeError(f"Incompatible dimensions for matmul: {shape_a} and {shape_b}")
             else:
                 raise RuntimeError(error_msg)
         return shape_a[:-1]
 
     if n != shape_b[-2]:
         if error_msg is not None:
-            raise RuntimeError("Incompatible dimensions for matmul")
+            raise RuntimeError(f"Incompatible dimensions for matmul: {shape_a} and {shape_b}")
         else:
             raise RuntimeError(error_msg)
 
     tail_shape = torch.Size([m, p])
-    bc_shape = _mul_broadcast_shape(shape_a[:-2], shape_b[:-2])
-    return bc_shape + tail_shape
+    batch_shape = [1] * max(len(shape_a) - 2, len(shape_b) - 2)
+    for i, (a_dim, b_dim) in enumerate(zip(shape_a[0:-2:-1], shape_b[0:-2:-1])):
+        if a_dim == b_dim:
+            batch_shape[-i - 1] = a_dim
+        elif a_dim == 1:
+            batch_shape[-i - 1] = b_dim
+        elif b_dim == 1:
+            batch_shape[-i - 1] = a_dim
+        else:
+            raise RuntimeError(f"Incompatible dimensions for matmul: {shape_a} and {shape_b}")
+    return torch.Size(batch_shape) + tail_shape
 
 
 def _pad_with_singletons(obj, num_singletons_before=0, num_singletons_after=0):
